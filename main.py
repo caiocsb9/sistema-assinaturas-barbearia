@@ -12,57 +12,53 @@ client = MongoClient(uri, server_api=ServerApi('1'))
 db = client['barbearia_db']
 clientes_col = db['clientes']
 
-def executar_trabalho_nosql():
-    try:
-        # Teste de Conexão Inicial
-        client.admin.command('ping')
-        print("✅ Sucesso: Conectado ao MongoDB Atlas!\n")
+def popular_banco_teste():
+    """Insere dados para termos o que agregar"""
+    print("\n[STEP 1] Populando banco com dados de teste...")
+    clientes_col.delete_many({}) # Limpa o banco antes de começar
+    
+    massa_dados = [
+        {"nome": "Enrique Gil", "plano": "Premium", "valor": 80.0, "status": "Ativo"},
+        {"nome": "Caio Barros", "plano": "Basico", "valor": 50.0, "status": "Ativo"},
+        {"nome": "João Silva", "plano": "Premium", "valor": 80.0, "status": "Inativo"},
+        {"nome": "Maria Souza", "plano": "VIP", "valor": 120.0, "status": "Ativo"},
+        {"nome": "Pedro Oliveira", "plano": "Basico", "valor": 50.0, "status": "Ativo"}
+    ]
+    clientes_col.insert_many(massa_dados)
+    print("✅ Dados inseridos com sucesso!")
 
-        print("--- INICIANDO OPERAÇÕES CRUD ---")
+def executar_agregacoes():
+    print("\n--- INICIANDO AGGREGATION PIPELINES ---")
 
-        # --- CREATE ---
-        print("\n[REQUISIÇÃO] Inserindo novo cliente...")
-        novo_cliente = {
-            "nome": "Enrique Gil",
-            "plano": "Mensal - 4 cortes",
-            "status": "Ativo",
-            "data_cadastro": "2025-12-19"
+    # TESTE 1: Contagem de clientes por tipo de plano ($group)
+    print("\n[PIPELINE 1] Contando clientes por plano...")
+    pipeline_planos = [
+        {
+            "$group": {
+                "_id": "$plano", 
+                "quantidade": {"$sum": 1}
+            }
         }
-        resultado_id = clientes_col.insert_one(novo_cliente).inserted_id
-        print(f"[RESPOSTA] Cliente cadastrado com ID: {resultado_id}")
+    ]
+    res1 = list(clientes_col.aggregate(pipeline_planos))
+    for item in res1:
+        print(f"RESPOSTA: Plano {item['_id']} possui {item['quantidade']} clientes.")
 
-        print("\n[REQUISIÇÃO] Inserindo novo cliente...")
-        novo_cliente = {
-            "nome": "Jorge Alfredo",
-            "plano": "Mensal - 4 cortes",
-            "status": "Ativo",
-            "data_cadastro": "2025-12-13"
+    # TESTE 2: Faturamento total de clientes ATIVOS ($match + $group)
+    print("\n[PIPELINE 2] Calculando faturamento de clientes ativos...")
+    pipeline_faturamento = [
+        {"$match": {"status": "Ativo"}},
+        {
+            "$group": {
+                "_id": None, 
+                "total": {"$sum": "$valor"}
+            }
         }
-        resultado_id = clientes_col.insert_one(novo_cliente).inserted_id
-        print(f"[RESPOSTA] Cliente cadastrado com ID: {resultado_id}")
-
-        # --- READ ---
-        print("\n[REQUISIÇÃO] Buscando dados do cliente no banco...")
-        cliente_buscado = clientes_col.find_one({"_id": resultado_id})
-        print(f"[RESPOSTA] Dados encontrados: {cliente_buscado}")
-
-        # --- UPDATE ---
-        print("\n[REQUISIÇÃO] Atualizando plano do cliente...")
-        clientes_col.update_one(
-            {"_id": resultado_id},
-            {"$set": {"plano": "Anual VIP - Ilimitado"}}
-        )
-        print(f"[RESPOSTA] Plano atualizado com sucesso!")
-
-        # --- DELETE ---
-        print("\n[REQUISIÇÃO] Removendo cliente de teste...")
-        clientes_col.delete_one({"_id": resultado_id})
-        print(f"[RESPOSTA] Cliente removido do sistema.")
-
-        print("\n--- TODAS AS ETAPAS DO CRUD FORAM CONCLUÍDAS ---")
-
-    except Exception as e:
-        print(f"❌ Ocorreu um erro: {e}")
+    ]
+    res2 = list(clientes_col.aggregate(pipeline_faturamento))
+    if res2:
+        print(f"RESPOSTA: O faturamento total ativo é R$ {res2[0]['total']:.2f}")
 
 if __name__ == "__main__":
-    executar_trabalho_nosql()
+    popular_banco_teste()
+    executar_agregacoes()
