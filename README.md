@@ -54,3 +54,10 @@ O sistema armazena as seguintes coleções:
 
 - Este sistema é um **projeto acadêmico** desenvolvido para a disciplina **Banco de Dados NoSQL**
 - Os dados armazenados são fictícios e utilizados apenas para fins educacionais
+
+📊 Atividade 3: Aggregation Pipeline
+Implementei uma esteira de processamento de dados para gerar relatórios gerenciais automáticos para a barbearia:
+
+Relatório de Planos: Utiliza o estágio $group para contar quantos clientes estão vinculados a cada plano (VIP, Mensal, etc).
+
+Relatório Financeiro: Combina os estágios $match (para filtrar apenas clientes ativos) e $group (para somar o faturamento total da barbearia).
